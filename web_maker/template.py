@@ -15,6 +15,7 @@ from .utils import extract_ext, replace_ext
 def create_model(config, page_cache):
     """
     Creates the top scope template model.
+
     :param config: Config dictionary.
     :param page_cache: Page loader that can retrieve page metadata.
     :return: Dictionary of values that can be passed to all templates.
@@ -107,7 +108,7 @@ def create_list_pages(content_dir, page_cache, root_dir=None) -> Callable[[str],
     root_dir = root_dir or os.path.curdir
     target_dir = os.path.join(root_dir, content_dir)
 
-    def list_pages(glob_pathname) -> Generator[dict, None, None]:
+    def list_pages(glob_pathname: str) -> Generator[dict, None, None]:
         glob_pathname = os.path.join(target_dir, glob_pathname)
 
         for path in glob(glob_pathname, recursive=True):
