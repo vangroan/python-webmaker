@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 def load_requirements():
     with open('requirements.txt', 'r') as fp:
-        return [dependency.strip() for dependency in fp if dependency.string()]
+        return [dependency.strip() for dependency in fp if dependency.strip()]
 
 
 setup(
