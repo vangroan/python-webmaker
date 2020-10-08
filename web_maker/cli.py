@@ -1,10 +1,29 @@
 import click
 
 
-@click.command()
-@click.option('--as-cowboy', '-c', is_flag=True, help='Greet as a cowboy.')
-@click.argument('name', default='world', required=False)
-def main(name, as_cowboy):
-    """Static site generator"""
-    greet = 'Howdy' if as_cowboy else 'Hello'
-    click.echo('{0}, {1}.'.format(greet, name))
+@click.group()
+def main():
+    pass
+
+
+@main.command()
+@click.option('--log-level', '-l')
+def build(log_level):
+    """
+    Generates the site.
+    """
+    click.echo(click.style('Hello World!', fg='green'))
+    click.echo(click.style('Some more text', bg='blue', fg='white'))
+    click.echo(click.style('ATTENTION', blink=True, bold=True))
+    click.secho('Hello World!', fg='green')
+    click.secho('Some more text', bg='blue', fg='white')
+    click.secho('ATTENTION', blink=True, bold=True)
+    click.secho('⠯', fg='green')
+
+
+@main.command()
+def clean():
+    """
+    Deletes the output directory.
+    """
+    click.echo('Clean')

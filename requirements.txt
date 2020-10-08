@@ -1,3 +1,4 @@
 # CLI
 click==7.0
 marshmallow==3.3.0
+colorama
