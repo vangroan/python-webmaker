@@ -1,0 +1,10 @@
+# Test configuration file
+
+site_name: Test Site
+content_dir: content/
+template_dir: templates/
+dist_dir: dist/
+base_url: http://sample-config.com/
+default_template: page.html
+charset: UTF-8
+language: en-gb
