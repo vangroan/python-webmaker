@@ -19,7 +19,7 @@ To use it:
 
 # Template Functions
 
-## `url_lookup`
+## `url`
 
 `url_lookup(file_location: str) -> str`
 
@@ -28,6 +28,19 @@ Given a path to a file in the project directory, return the equivalent URL path 
 ```jinja
 * [Home]({{ url('content/index.md') }})
 * [Test]({{ url('content/test.md') }})
+```
+
+The above outputs hyperlinks.
+
+```html
+<ul>
+  <li>
+    <a href="http://example.com/index.html">Home</a>
+  </li>
+  <li>
+    <a href="http://example.com/test.html">Test</a>
+  </li>
+</ul>
 ```
 
 ## `list_pages`
