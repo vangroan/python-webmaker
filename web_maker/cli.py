@@ -1,9 +1,12 @@
 import click
 
+from .config import load_config
+
 
 @click.group()
 def main():
-    pass
+    """foobar"""
+    print("foobar")
 
 
 @main.command()
@@ -19,6 +22,9 @@ def build(log_level):
     click.secho('Some more text', bg='blue', fg='white')
     click.secho('ATTENTION', blink=True, bold=True)
     click.secho('⠯', fg='green')
+    from pprint import pprint
+    config = load_config(".")
+    pprint(config)
 
 
 @main.command()

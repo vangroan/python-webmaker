@@ -3,21 +3,25 @@ Website project configuration.
 """
 import os
 
-from marshmallow import fields, Schema, ValidationError
-import yaml
+from marshmallow import fields, Schema, ValidationError, EXCLUDE
 
-from .utils import format_validation_errors
+from . import osutils
 
 
 class ConfigSchema(Schema):
     site_name = fields.String(missing="website")
-    content_dir = fields.String(required=True)
-    template_dir = fields.String(required=True)
-    dist_dir = fields.String(required=True)
-    base_url = fields.Url(required=True)
+    content_path = fields.List(fields.String(), required=True)
+    template_path = fields.List(fields.String(), required=True)
+    dist_path = fields.String(required=True)
     default_template = fields.String(required=True)
-    language = fields.String(missing='en-gb')
-    charset = fields.String(missing='UTF-8')
+
+    # HTML
+    html_base_url = fields.Url(required=True)
+    html_language = fields.String(missing='en-gb')
+    html_charset = fields.String(missing='UTF-8')
+
+    class Meta:
+        unknown = EXCLUDE
 
 
 class ConfigError(Exception):
@@ -27,34 +31,37 @@ class ConfigError(Exception):
     pass
 
 
-def load_config(*directories, config_filename=('config.yaml', 'config.yml')) -> dict:
-    """
-    Walks the given directories, looking for config files. The first file with a matching
-    filename will be loaded as the script's config.
+def load_config(dir_path: str, filename="conf.py") -> dict:
+    """Load project configuration from the given directory path."""
+    namespace = _eval_config(filename, dir_path)
 
-    :param directories: Directory paths to search for config files.
-    :param config_filename: Config file name to match during search.
-    :return: Config values in dictionary.
-    :raise ConfigError: No config file is found, file is malformed or doesn't pass validation.
-    """
-    for directory in directories:
-        # Convert to absolute path
-        absolute_path = os.path.normpath(directory)
+    try:
+        config = ConfigSchema().load(namespace)
+    except ValidationError as exc:
+        # TODO: Print validation error fields in a fancy way.
+        msg = "Config file has invalid fields"
+        raise ConfigError(msg) from exc
 
-        for root, _, files in os.walk(absolute_path):
-            for filename in files:
-                if filename in config_filename:
-                    file_path = os.path.join(root, filename)
-                    with open(file_path) as fp:
-                        try:
-                            config = yaml.safe_load(fp)
-                        except yaml.YAMLError as ex:
-                            raise ConfigError("Failed to deserialize file %s" % file_path) from ex
+    return config
 
-                        try:
-                            return ConfigSchema().load(config)
-                        except ValidationError as err:
-                            raise ConfigError(
-                                "Config validation errors:\n%s" % format_validation_errors(err.messages)) from err
 
-    raise ConfigError("No config file was found")
+def _eval_config(filename: str, dir_path: str) -> dict:
+    """Load config file by executing it as a Python program."""
+    # Values are extracted from the config file/program by
+    # passing in a dictionary as the module globals.
+    namespace = {}
+    namespace["__file__"] = filename
+
+    # Change current working directory to the config
+    # directory, so the config file can access files
+    # relative to itself.
+    with osutils.cd(os.path.abspath(dir_path)):
+        try:
+            with open(filename, "r", encoding="utf-8") as fp:
+                conf_source = fp.read()
+                exec(conf_source, namespace)
+        except SystemExit as exc:
+            msg = "Config file or one of its imports called sys.exit()"
+            raise ConfigError(msg) from exc
+
+    return namespace
