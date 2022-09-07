@@ -17,8 +17,8 @@ class ConfigSchema(Schema):
 
     # HTML
     html_base_url = fields.Url(required=True)
-    html_language = fields.String(missing='en-gb')
-    html_charset = fields.String(missing='UTF-8')
+    html_language = fields.String(missing="en-gb")
+    html_charset = fields.String(missing="UTF-8")
 
     class Meta:
         unknown = EXCLUDE
@@ -28,6 +28,7 @@ class ConfigError(Exception):
     """
     Errors raised during config loading or handling.
     """
+
     pass
 
 
@@ -39,8 +40,7 @@ def load_config(dir_path: str, filename="conf.py") -> dict:
         config = ConfigSchema().load(namespace)
     except ValidationError as exc:
         # TODO: Print validation error fields in a fancy way.
-        msg = "Config file has invalid fields"
-        raise ConfigError(msg) from exc
+        raise ConfigError("Config file has invalid fields") from exc
 
     return config
 

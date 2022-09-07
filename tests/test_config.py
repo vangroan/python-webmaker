@@ -11,7 +11,7 @@ site_name: Test Site
 """
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def config_directory():
     cwd = os.path.realpath(os.path.dirname(__file__))
     print("Configuration directory:", cwd)
@@ -21,5 +21,5 @@ def config_directory():
 def test_config_walk(config_directory):
     config = load_config(config_directory)
     print(config)
-    assert config['site_name'] == "Test Site"
-    assert config['content_dir'] == "content/"
+    assert config["site_name"] == "Test Site"
+    assert config["content_dir"] == "content/"

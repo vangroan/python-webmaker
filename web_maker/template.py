@@ -5,7 +5,7 @@ from copy import deepcopy
 import glob
 import os
 import pathlib
-from typing import Callable, Generator
+import typing as T
 from urllib.parse import urljoin
 
 from .loader import PageSchema
@@ -29,32 +29,38 @@ def create_model(config, page_cache):
         with open(file_path) as fp:
             return fp.read()
 
-    model['site_name'] = config['site_name']
-    model['concat'] = lambda sep, *parts: sep.join(parts)
-    model['inline_file'] = inline_file
-    model['url'] = create_url_lookup(config['base_url'], (config['content_dir'],), ext_map={'md': 'html'})
-    model['list_pages'] = create_list_pages(config['content_dir'], page_cache)
+    model["site_name"] = config["site_name"]
+    model["concat"] = lambda sep, *parts: sep.join(parts)
+    model["inline_file"] = inline_file
+    model["url"] = create_url_lookup(
+        config["base_url"], (config["content_dir"],), ext_map={"md": "html"}
+    )
+    model["list_pages"] = create_list_pages(config["content_dir"], page_cache)
 
     return model
 
 
-def create_url_lookup(base_url, directory_paths=(), ext_map=None) -> Callable[[str], str]:
+def create_url_lookup(
+    base_url: str, directory_paths: T.Sequence[str] = (), ext_map=T.Mapping[str, str]
+) -> T.Callable[[str], str]:
     """
     Creates a helper function for use in templates that can translate file paths
     to resource URLs for use in html pages in the website.
 
-    :type base_url: str
-    :type directory_paths: Sequence[str]
-    :type ext_map: Dict[str, str]
-    :param base_url: The base URL that will be prepended to the
-        path. Importantly the end must trail with a slash, otherwise
-        the last part of the path will be treated as a file
-        when resolving relative paths.
-    :param directory_paths:
-    :param ext_map: Mapping of files extensions, used to convert file names
-        from a source type to a target type.
-    :return: Function that translates project file paths to site resource URLs.
-    :raise ValueError: When base URL is None.
+    Args:
+        base_url: The base URL that will be prepended to the path.
+            Importantly the end must trail with a slash, otherwise
+            the last part of the path will be treated as a file
+            when resolving relative paths.
+        directory_paths: Directories to search for file.
+        ext_map: Mapping of files extension, used to convert file names
+            from a source type to a target type.
+
+    Raises:
+        ValueError: When base URL is None.
+
+    Return:
+        Function that translates project file paths to site resource URLs.
     """
     # TODO: Support for permalinks
     # TODO: Support for URL rewriting
@@ -67,12 +73,25 @@ def create_url_lookup(base_url, directory_paths=(), ext_map=None) -> Callable[[s
     if ext_map is None:
         ext_map = {}
 
-    def url_lookup(file_location) -> str:
+    # Validate extension map
+    for key, value in ext_map.items():
+        message = "File extension map should not include leading dot. Replace '{incorrect}' with '{correct}'"
+        if key.startswith("."):
+            raise ValueError(message.format(incorrect=key, correct=key.lstrip(".")))
+
+        if value.startswith("."):
+            raise ValueError(message.format(incorrect=value, correct=value.lstrip(".")))
+
+    def url_lookup(file_location: str) -> str:
         """
         Given a path to a file in the project directory, return the equivalent URL path
         in the generated site's file.
 
-        :return: Absolute path to the site file.
+        Args:
+            file_location: Filesystem path to the content file.
+
+        Returns:
+            Absolute path to the site file.
         """
         # Subtract 'content' from the file location
         file_path_parts = pathlib.Path(file_location).parts
@@ -93,7 +112,9 @@ def create_url_lookup(base_url, directory_paths=(), ext_map=None) -> Callable[[s
     return url_lookup
 
 
-def create_list_pages(content_dir, page_cache, root_dir=None) -> Callable[[str], Generator[dict, None, None]]:
+def create_list_pages(
+    content_dir, page_cache, root_dir=None
+) -> T.Callable[[str], T.Generator[dict, None, None]]:
     """
     Creates a helper function for use in templates for recursively listing pages
     in the content folder.
@@ -108,13 +129,13 @@ def create_list_pages(content_dir, page_cache, root_dir=None) -> Callable[[str],
     root_dir = root_dir or os.path.curdir
     target_dir = os.path.join(root_dir, content_dir)
 
-    def list_pages(glob_pathname: str) -> Generator[dict, None, None]:
+    def list_pages(glob_pathname: str) -> T.Generator[dict, None, None]:
         glob_pathname = os.path.join(target_dir, glob_pathname)
 
         for path in glob(glob_pathname, recursive=True):
             metadata = page_cache.get_meta(path)
             # FIXME: Do we need the processed markdown content here?
             file_path = os.path.normpath(path)
-            yield PageSchema().load({'meta': metadata, 'file_path': file_path})
+            yield PageSchema().load({"meta": metadata, "file_path": file_path})
 
     return list_pages
