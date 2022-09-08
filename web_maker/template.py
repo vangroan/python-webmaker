@@ -33,9 +33,9 @@ def create_model(config, page_cache):
     model["concat"] = lambda sep, *parts: sep.join(parts)
     model["inline_file"] = inline_file
     model["url"] = create_url_lookup(
-        config["base_url"], (config["content_dir"],), ext_map={"md": "html"}
+        config["html_base_url"], (config["content_path"],), ext_map={"md": "html"}
     )
-    model["list_pages"] = create_list_pages(config["content_dir"], page_cache)
+    model["list_pages"] = create_list_pages(config["content_path"], page_cache)
 
     return model
 
@@ -132,7 +132,7 @@ def create_list_pages(
     def list_pages(glob_pathname: str) -> T.Generator[dict, None, None]:
         glob_pathname = os.path.join(target_dir, glob_pathname)
 
-        for path in glob(glob_pathname, recursive=True):
+        for path in glob.glob(glob_pathname, recursive=True):
             metadata = page_cache.get_meta(path)
             # FIXME: Do we need the processed markdown content here?
             file_path = os.path.normpath(path)

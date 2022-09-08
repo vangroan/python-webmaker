@@ -16,7 +16,9 @@ class JinjaMarkdownExtension(Extension):
     # noinspection PyMethodOverriding
     def extendMarkdown(self, md, _md_globals):
         md.preprocessors.register(
-            JinjaMarkdownProcessor(md, self.config, self.template_env, self.model), 'jinja', 10
+            JinjaMarkdownProcessor(md, self.config, self.template_env, self.model),
+            "jinja",
+            10,
         )
 
 
@@ -50,9 +52,7 @@ class IgnoreMetaExtension(Extension):
 
     # noinspection PyMethodOverriding
     def extendMarkdown(self, md, _md_globals):
-        md.preprocessors.register(
-            IgnoreMetaProcessor(md), 'ignore-meta', 20
-        )
+        md.preprocessors.register(IgnoreMetaProcessor(md), "ignore-meta", 20)
 
 
 class IgnoreMetaProcessor(Preprocessor):
@@ -66,11 +66,11 @@ class IgnoreMetaProcessor(Preprocessor):
             counter = index
             if not ignoring:
                 # first section marker
-                if line.strip() == '---':
+                if line.strip() == "---":
                     ignoring = not ignoring
             else:
                 # second section marker
-                if line.strip() == '---':
+                if line.strip() == "---":
                     break
         else:
             counter = 0

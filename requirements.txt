@@ -1,6 +1,7 @@
 # Parse Content
 markdown==3.1.1
 Jinja2==2.10.3
+markupsafe==2.0.1  # newer version error: cannot import name 'soft_unicode' from 'markupsafe'
 PyYAML==5.3
 Pygments==2.5.2
 
@@ -9,6 +10,6 @@ beautifulsoup4==4.8.2
 rcssmin==1.0.6
 
 # CLI
-click==7.0
-marshmallow==3.3.0
+click~=8.0
+marshmallow~=3.3.0
 colorama

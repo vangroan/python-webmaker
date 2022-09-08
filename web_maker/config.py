@@ -1,17 +1,20 @@
 """
 Website project configuration.
 """
+import logging
 import os
+import typing as T
 
 from marshmallow import fields, Schema, ValidationError, EXCLUDE
 
+from .utils import format_validation_errors
 from . import osutils
 
 
 class ConfigSchema(Schema):
     site_name = fields.String(missing="website")
-    content_path = fields.List(fields.String(), required=True)
-    template_path = fields.List(fields.String(), required=True)
+    content_path = fields.String(required=True)
+    template_path = fields.String(required=True)
     dist_path = fields.String(required=True)
     default_template = fields.String(required=True)
 
@@ -40,7 +43,8 @@ def load_config(dir_path: str, filename="conf.py") -> dict:
         config = ConfigSchema().load(namespace)
     except ValidationError as exc:
         # TODO: Print validation error fields in a fancy way.
-        raise ConfigError("Config file has invalid fields") from exc
+        errors = format_validation_errors(exc.normalized_messages())
+        raise ConfigError(f"Config file has invalid fields: \n{errors}") from exc
 
     return config
 
@@ -65,3 +69,10 @@ def _eval_config(filename: str, dir_path: str) -> dict:
             raise ConfigError(msg) from exc
 
     return namespace
+
+
+def setup_logging(level: T.Union[str, int] = "DEBUG"):
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(message)s",
+    )

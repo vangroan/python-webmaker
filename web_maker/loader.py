@@ -1,8 +1,8 @@
 from copy import deepcopy
+import logging
 import os
 from typing import Dict, Optional
 
-import click
 from marshmallow import fields, EXCLUDE, ValidationError, Schema
 import yaml
 
@@ -13,6 +13,7 @@ class PageLoadError(Exception):
     """
     Error raised during loading or processing page content files.
     """
+
     pass
 
 
@@ -28,7 +29,8 @@ class PageLoader(object):
 
     def __init__(self):
         self._cache: Dict[str, PageLoader.CacheItem] = {}
-        self._section_marker = b'---'
+        self._section_marker = b"---"
+        self._logger = logging.getLogger(__name__)
 
     def get_meta(self, file_path) -> dict:
         """
@@ -55,26 +57,30 @@ class PageLoader(object):
     def _get_or_load(self, file_path):
         # If cache item doesn't exist, load file.
         if file_path not in self._cache:
-            click.echo("Page cache miss %s", file_path)
+            self._logger.debug("Page cache miss %s", file_path)
             self._load_page(file_path)
 
     def _load_page(self, file_path):
         try:
-            with open(file_path, 'rb') as fp:
+            with open(file_path, "rb") as fp:
                 data = fp.read()
 
-                metadata_str = self._extract_metadata_section(data) or b''
+                metadata_str = self._extract_metadata_section(data) or b""
                 metadata = yaml.safe_load(metadata_str) or {}
                 metadata = BuiltinMetaSchema(unknown=EXCLUDE).load(metadata)
-                click.echo("Metadata %s", metadata)
+                self._logger.debug("Metadata %s", metadata)
 
-                self._cache[file_path] = PageLoader.CacheItem(meta=metadata, file_bytes=data)
+                self._cache[file_path] = PageLoader.CacheItem(
+                    meta=metadata, file_bytes=data
+                )
         except OSError as err:
             raise PageLoadError("Error opening file %s" % file_path) from err
         except PageLoadError as err:
             raise PageLoadError("Error while loading page %s" % file_path) from err
         except yaml.YAMLError as err:
-            raise PageLoadError("Error while parsing metadata for %s" % file_path) from err
+            raise PageLoadError(
+                "Error while parsing metadata for %s" % file_path
+            ) from err
         except ValidationError as err:
             raise PageLoadError(
                 "Built-in metadata validation errors:\n%s"
@@ -96,7 +102,10 @@ class PageLoader(object):
             return None
 
     class CacheItem(object):
-        __slots__ = ('meta', 'file_bytes',)
+        __slots__ = (
+            "meta",
+            "file_bytes",
+        )
 
         def __init__(self, meta=None, file_bytes=None):
             self.meta = meta
@@ -107,7 +116,8 @@ class BuiltinMetaSchema(Schema):
     """
     Schema to validate content metadata that has special purposes within the script.
     """
-    title = fields.String(missing='page')
+
+    title = fields.String(missing="page")
     template = fields.String(missing=None)
     draft = fields.Boolean(missing=False)
     # FIXME: yaml loader outputs datetime.date, marshmallow expects a string
@@ -117,5 +127,5 @@ class BuiltinMetaSchema(Schema):
 
 class PageSchema(Schema):
     meta = fields.Nested(BuiltinMetaSchema, required=True)
-    content = fields.String(missing='', required=False)
+    content = fields.String(missing="", required=False)
     file_path = fields.String(required=True)
