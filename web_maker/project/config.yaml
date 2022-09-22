@@ -1,0 +1,27 @@
+# Human readable name that will be displayed to users.
+site_name: {{project_name}}
+
+# Path to directory where content files are located.
+content_path: content/
+
+# Path to directory where template files are located.
+template_path: templates/
+
+# Path to directory where built files will be output.
+dist_path: dist/
+
+# Base URL to prepend to all relative links in content files.
+#
+# Importantly the end must trail with a slash, otherwise
+# the last part of the path will be treated as a file
+# when resolving relative paths.
+base_url: http://blog.vangroan.com/
+
+# Template file to use when a content page doesn't specify a template
+# in it's metadata.
+default_template: page.html
+
+# Character set of HTML pages. Used in <meta charset> header.
+charset: UTF-8
+
+language: en-gb

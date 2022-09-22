@@ -71,8 +71,15 @@ def _eval_config(filename: str, dir_path: str) -> dict:
     return namespace
 
 
-def setup_logging(level: T.Union[str, int] = "DEBUG"):
+def setup_logging(verbose: bool = False):
+    if verbose:
+        level = logging.DEBUG
+        format = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(message)s"
+    else:
+        level = logging.INFO
+        format = "%(message)s"
+
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(message)s",
+        format=format,
     )
