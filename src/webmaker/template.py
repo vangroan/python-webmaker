@@ -1,18 +1,20 @@
 """
 Functions for use inside templates.
 """
-from copy import deepcopy
+
 import glob
 import os
 import pathlib
-import typing as T
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable
 from urllib.parse import urljoin
 
-from .loader import PageSchema
+from .config import Config
+from .loader import Page, PageLoader
 from .utils import extract_ext, replace_ext
 
 
-def create_model(config, page_cache):
+def create_model(config: Config, page_cache: PageLoader) -> dict[str, Any]:
     """
     Creates the top scope template model.
 
@@ -20,29 +22,77 @@ def create_model(config, page_cache):
     :param page_cache: Page loader that can retrieve page metadata.
     :return: Dictionary of values that can be passed to all templates.
     """
-    model = deepcopy(config)
+    model: dict[str, Any] = {"config": config.model_dump()}
 
-    def inline_file(file_path) -> str:
-        """
-        Loads a file's contents, and outputs it as a string.
-        """
-        with open(file_path) as fp:
-            return fp.read()
-
-    model["site_name"] = config["site_name"]
-    model["concat"] = lambda sep, *parts: sep.join(parts)
-    model["inline_file"] = inline_file
-    model["url"] = create_url_lookup(
-        config["html_base_url"], (config["content_path"],), ext_map={"md": "html"}
-    )
-    model["list_pages"] = create_list_pages(config["content_path"], page_cache)
+    model[Concat.name] = Concat()
+    model[Join.name] = Join()
+    model[InlineFile.name] = InlineFile()
+    model["url"] = create_url_lookup(config.base_url, (config.content_path,), ext_map={"md": "html"})
+    model[ListPages.name] = ListPages(config.content_path, page_cache)
 
     return model
 
 
+class Concat:
+    """
+    Concatenate strings together.
+    """
+
+    name = "concat"
+
+    def __call__(self, *parts: str) -> str:
+        return "".join(parts)
+
+
+class Join:
+    """
+    Join strings together using the given seperator.
+    """
+
+    name = "join"
+
+    def __call__(self, seperator: str, *parts: str) -> str:
+        return seperator.join(parts)
+
+
+class InlineFile:
+    """
+    Loads a file's contents, and outputs it as a string.
+    """
+
+    name = "inline_file"
+
+    def __call__(self, file_path: str, encoding: str = "utf-8") -> str:
+        with open(file_path, "r", encoding=encoding) as fp:
+            return fp.read()
+
+
+class ListPages:
+    """
+    Recursively list pages in a content directory.
+    """
+
+    name = "list_pages"
+
+    def __init__(self, content_dir: str, page_cache: PageLoader):
+        self.content_dir = pathlib.Path(content_dir)
+        self.page_cache = page_cache
+
+    def __call__(self, glob_pattern: str = "*") -> list[Page]:
+        glob_pathname = os.path.join(self.content_dir, glob_pattern)
+        result = []
+
+        for path in glob.glob(glob_pathname, recursive=True):
+            metadata = self.page_cache.get_meta(path)
+            filepath = os.path.normpath(path)
+            result.append(Page(metadata=metadata, filepath=filepath))
+
+        return result
+
+
 def create_url_lookup(
-    base_url: str, directory_paths: T.Sequence[str] = (), ext_map=T.Mapping[str, str]
-) -> T.Callable[[str], str]:
+    base_url: str, directory_paths: Sequence[str] = (), ext_map=Mapping[str, str]
+) -> Callable[[str], str]:
     """
     Creates a helper function for use in templates that can translate file paths
     to resource URLs for use in html pages in the website.
@@ -82,7 +132,7 @@ def create_url_lookup(
         if value.startswith("."):
             raise ValueError(message.format(incorrect=value, correct=value.lstrip(".")))
 
-    def url_lookup(file_location: str) -> str:
+    def url_lookup(file_location: str, absolute: bool = True) -> str:
         """
         Given a path to a file in the project directory, return the equivalent URL path
         in the generated site's file.
@@ -107,35 +157,8 @@ def create_url_lookup(
             if new_file_ext:
                 file_location = replace_ext(file_location, new_file_ext)
 
-        return urljoin(base_url, file_location)
+        if absolute:
+            return urljoin(base_url, file_location)
+        return file_location
 
     return url_lookup
-
-
-def create_list_pages(
-    content_dir, page_cache, root_dir=None
-) -> T.Callable[[str], T.Generator[dict, None, None]]:
-    """
-    Creates a helper function for use in templates for recursively listing pages
-    in the content folder.
-
-    :param content_dir: Directory where page files are kept.
-    :param page_cache: Page loader that can retrieve page metadata.
-    :param root_dir: Optional root directory where the content directory is located.
-        If None, the current working directory is used.
-    :return: Function that takes a file path glob, and returns a generator
-        that yields page objects.
-    """
-    root_dir = root_dir or os.path.curdir
-    target_dir = os.path.join(root_dir, content_dir)
-
-    def list_pages(glob_pathname: str) -> T.Generator[dict, None, None]:
-        glob_pathname = os.path.join(target_dir, glob_pathname)
-
-        for path in glob.glob(glob_pathname, recursive=True):
-            metadata = page_cache.get_meta(path)
-            # FIXME: Do we need the processed markdown content here?
-            file_path = os.path.normpath(path)
-            yield PageSchema().load({"meta": metadata, "file_path": file_path})
-
-    return list_pages

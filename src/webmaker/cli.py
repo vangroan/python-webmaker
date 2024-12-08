@@ -1,10 +1,12 @@
 """Command line interface."""
-from functools import wraps
+
 import logging
 import os
+from functools import wraps
+
 import click
 
-from web_maker.project import init_project
+from webmaker.project import init_project
 
 from .build import build_content
 from .config import load_config, setup_logging
@@ -54,16 +56,16 @@ def init(logger: logging.Logger):
     project_dir = os.path.abspath(os.curdir)
 
     # Directory must be empty
-    for _, dirnames, filenames in os.walk(project_dir):
-        if dirnames or filenames:
-            logger.error("Failed to create project: directory must be empty")
-            exit(1)
+    if any(os.walk(project_dir)):
+        click.confirm("Directory is not empty. Continue?", abort=True)
 
     # Use current directory as project name
     dirname = os.path.basename(project_dir)
-    project_name = click.prompt(f"Site name", default=dirname)
+    project_name = click.prompt("Site name", default=dirname)
 
-    init_project(project_name, project_dir)
+    init_project(project_name)
+
+    click.echo("Project initialised.")
 
 
 @main.command(cls=StdCommand)

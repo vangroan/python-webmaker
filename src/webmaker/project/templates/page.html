@@ -1,0 +1,17 @@
+
+{% extends 'base.html' %}
+
+
+{% block body %}
+  {{ page.content }}
+
+  <ul>
+  {% for page in list_pages() %}
+    <li>
+      <a href="{{ url(page.filepath) }}">
+        {{ page.title }}
+      </a>
+    </li>
+  {% endfor %}
+  </ul>
+{% endblock %}

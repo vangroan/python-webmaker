@@ -1,28 +1,32 @@
 """Content generator pipeline"""
+
 import contextlib
 import logging
 import os
+import shutil
 from time import monotonic_ns
 
-import rcssmin
+import rcssmin  # type: ignore[import]
 from bs4 import BeautifulSoup
 from jinja2 import Environment, FileSystemLoader
 from markdown import Markdown
 
+from .config import Config
+from .jinja import IgnoreMetaExtension, JinjaMarkdownExtension
 from .loader import PageLoader
 from .template import create_model
-from .jinja import JinjaMarkdownExtension, IgnoreMetaExtension
 from .utils import replace_ext, subtract_prefix
 
+logger = logging.getLogger(__name__)
 
-def build_content(config: dict):
-    logger = logging.getLogger(__name__)
+
+def build_content(config: Config):
 
     with stopwatch():
         logger.info("Building content")
 
         # Ensure output directory exists
-        logger.info("Output directory: %s", config["dist_path"])
+        logger.info("Output directory: %s", config.dist_path)
 
         # Cache of loaded content files
         page_loader = PageLoader()
@@ -31,11 +35,11 @@ def build_content(config: dict):
         model = create_model(config, page_loader)
 
         # Jinaj2 environment
-        template_env = Environment(loader=FileSystemLoader(config["template_path"]))
+        template_env = Environment(loader=FileSystemLoader(config.template_path))
         template_env.filters["cssmin"] = rcssmin.cssmin
         template_env.filters["first"] = lambda seq: seq[0] if seq else ""
 
-        for root, _, files in os.walk(config["content_path"]):
+        for root, _, files in os.walk(config.content_path):
             logger.debug("Walking %s", root)
             for filename in files:
                 filepath = os.path.join(root, filename)
@@ -44,14 +48,13 @@ def build_content(config: dict):
                 metadata = page_loader.get_meta(filepath)
 
                 # Build template scoped model.
-                template_model = {**model}
-                template_model["get_meta"] = lambda name: metadata.get(name)
+                page_model = {**model, "metadata": {**metadata.model_dump()}, "phase": "content"}
 
-                file_bytes = page_loader.load_page(filepath)
-                file_str = file_bytes.decode("utf-8")
+                file_str = page_loader.load_page(filepath).decode(config.encoding)
 
                 # FIXME: Move parser out of loop
                 md = Markdown(
+                    tab_length=2,
                     extensions=[
                         "abbr",
                         "admonition",
@@ -60,40 +63,42 @@ def build_content(config: dict):
                         "sane_lists",
                         "footnotes",
                         "toc",
-                        JinjaMarkdownExtension(template_env, template_model),
+                        JinjaMarkdownExtension(template_env, page_model),
                         IgnoreMetaExtension(),
-                    ]
+                    ],
                 )
                 content_html = md.convert(file_str)
 
                 # Recreate sub-directory tree by lifting paths out of content folder
                 # and placing them in the root of the distribution folder.
-                target_dir = os.path.join(
-                    config["dist_path"], subtract_prefix(config["content_path"], root)
-                )
+                target_dir = os.path.join(config.dist_path, subtract_prefix(config.content_path, root))
                 os.makedirs(target_dir, exist_ok=True)
-                target_filepath = os.path.join(
-                    target_dir, replace_ext(filename, "html")
-                )
+                target_filepath = os.path.join(target_dir, replace_ext(filename, "html"))
 
                 # Build page object
                 page = {
-                    "meta": {**metadata},
+                    "metadata": {**metadata.model_dump()},
                     "content": content_html,
+                    "original": file_str,
                     "file_location": filepath,
                 }
 
                 with open(target_filepath, "w", encoding="utf-8") as fp:
-                    template_name = metadata["template"] or config["default_template"]
-                    logger.info("Load template '%s'", template_name)
+                    page_model["phase"] = "template"
+                    template_name = metadata.template or config.default_template
+                    logger.debug("Load template '%s'", template_name)
                     template = template_env.get_template(template_name)
-                    page_html = template.render(page=page, **template_model)
+                    page_html = template.render(page=page, **page_model)
 
                     # Prettify html output
                     soup = BeautifulSoup(page_html, features="html.parser")
 
                     logger.debug("Writing %s", target_filepath)
-                    fp.write(soup.prettify())
+                    fp.write(soup.prettify(formatter="html5"))
+                    # fp.write(page_html)
+
+        # Copy static directory as-is.
+        shutil.copytree("static/", os.path.join(config.dist_path), dirs_exist_ok=True)
 
         logger.info("Done")
 
