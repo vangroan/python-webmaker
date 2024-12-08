@@ -1,45 +1,62 @@
 """
 Tools for creating and managing a site project using web-maker from the command line.
 """
+
 import logging
-import os
+import shutil
+from pathlib import Path
 
 import jinja2
 
 
-def new_project():
-    """
-    Create a sub-directory and initialize a new project inside it.
-    """
-    raise NotImplementedError()
+logger = logging.getLogger(__name__)
+
+PACKAGE_DIR = Path(__file__).parent.expanduser().resolve()
+PROJECT_TEMPLATE_DIR = PACKAGE_DIR / "project"
+PROJECT_FILES = [".gitignore", "Makefile"]
+PROJECT_DIRS = ["content", "static", "templates"]
 
 
-def init_project(project_name: str, project_dir: str):
+def init_project(project_name: str):
     """
-    Initialize a new project inside the current directory.
+    Initialise a new project inside the current directory.
 
     Args:
         project_name: User readable name of the website
-        project_dir: Directory path where the project wll be created
     """
-    logger = logging.getLogger(__name__)
+    logger.debug("Project template directory: %s", PROJECT_TEMPLATE_DIR)
 
-    # Directory contining project template
-    template_dir = os.path.join(os.path.dirname(__file__), "project")
-
-    template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
+    template_env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(PROJECT_TEMPLATE_DIR))
+    )
     template_model = {"project_name": project_name}
+
+    logger.info("Initialising project in: %s", Path.cwd())
 
     with open("config.yaml", "w") as fp:
         rendered = template_env.get_template("config.yaml").render(**template_model)
-        logger.debug("render: %s", rendered)
         fp.write(rendered)
 
-    # TODO: conf.py or config.yaml
-    # TODO: templates/
-    # TODO: styles/
-    # TODO: content/
-    raise NotImplementedError()
+    try:
+        # Copy top-level files.
+        for filename in PROJECT_FILES:
+            logger.info("Creating: %s", filename)
+            
+            if Path(filename).exists():
+                raise FileExistsError(f"File exists: '{filename}'")
+            
+            srcpath = PROJECT_TEMPLATE_DIR / filename
+            shutil.copyfile(srcpath, filename)
+
+        # Copy project directories.
+        for dirname in PROJECT_DIRS:
+            logger.info("Creating: %s/", dirname)
+            srcpath = PROJECT_TEMPLATE_DIR / dirname
+            shutil.copytree(srcpath, dirname)
+
+    except FileExistsError as err:
+        logger.error(err)
+        exit(1)
 
 
 class ProjectError(Exception):

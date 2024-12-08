@@ -1,30 +1,32 @@
 """
 Website project configuration.
 """
+
 import logging
 import os
-import typing as T
+from pathlib import Path
 
-from marshmallow import fields, Schema, ValidationError, EXCLUDE
+from pydantic import BaseModel, Field, ValidationError
+import yaml
 
-from .utils import format_validation_errors
 from . import osutils
 
+__all__ = ["Config", "load_config"]
 
-class ConfigSchema(Schema):
-    site_name = fields.String(missing="website")
-    content_path = fields.String(required=True)
-    template_path = fields.String(required=True)
-    dist_path = fields.String(required=True)
-    default_template = fields.String(required=True)
 
-    # HTML
-    html_base_url = fields.Url(required=True)
-    html_language = fields.String(missing="en-gb")
-    html_charset = fields.String(missing="UTF-8")
+class Config(BaseModel):
+    site_name: str
+    content_path: str
+    template_path: str
+    dist_path: str
+    base_url: str
+    default_template: str
 
-    class Meta:
-        unknown = EXCLUDE
+    encoding: str
+
+    charset: str
+    language: str
+    keywords: list[str] = Field(default_factory=list)
 
 
 class ConfigError(Exception):
@@ -35,16 +37,24 @@ class ConfigError(Exception):
     pass
 
 
-def load_config(dir_path: str, filename="conf.py") -> dict:
+def load_config(dir_path: str, filename: str = "config.yaml") -> Config:
     """Load project configuration from the given directory path."""
-    namespace = _eval_config(filename, dir_path)
+
+    confpath = Path(dir_path) / filename
+    with confpath.open("r") as fp:
+        namespace = yaml.safe_load(fp)
+
+    if not isinstance(namespace, dict):
+        raise ConfigError(
+            f"Loaded config should be a dictionary, but found '{type(namespace).__qualname__}'"
+        )
 
     try:
-        config = ConfigSchema().load(namespace)
-    except ValidationError as exc:
+        config = Config(**namespace)
+    except ValidationError as err:
         # TODO: Print validation error fields in a fancy way.
-        errors = format_validation_errors(exc.normalized_messages())
-        raise ConfigError(f"Config file has invalid fields: \n{errors}") from exc
+        # errors = format_validation_errors(exc.normalized_messages())
+        raise ConfigError("Config file has invalid fields") from err
 
     return config
 
@@ -77,7 +87,7 @@ def setup_logging(verbose: bool = False):
         format = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(message)s"
     else:
         level = logging.INFO
-        format = "%(message)s"
+        format = "[%(levelname)s] %(message)s"
 
     logging.basicConfig(
         level=level,

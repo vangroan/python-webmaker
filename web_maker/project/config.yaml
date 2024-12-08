@@ -1,5 +1,5 @@
 # Human readable name that will be displayed to users.
-site_name: {{project_name}}
+site_name: {{ project_name }}
 
 # Path to directory where content files are located.
 content_path: content/
@@ -21,7 +21,23 @@ base_url: http://blog.vangroan.com/
 # in it's metadata.
 default_template: page.html
 
+# ------- #
+# Content #
+# ------- #
+
+# Default byte encoding of the content files.
+encoding: utf-8
+
+# ---- #
+# HTML #
+# ---- #
+
 # Character set of HTML pages. Used in <meta charset> header.
 charset: UTF-8
 
-language: en-gb
+# Default language of the HTML5 document tag.
+language: en
+
+# Default keywords to add to the HTML header.
+keywords:
+- Blog
