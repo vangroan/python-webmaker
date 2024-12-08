@@ -132,7 +132,7 @@ def create_url_lookup(
         if value.startswith("."):
             raise ValueError(message.format(incorrect=value, correct=value.lstrip(".")))
 
-    def url_lookup(file_location: str) -> str:
+    def url_lookup(file_location: str, absolute: bool = True) -> str:
         """
         Given a path to a file in the project directory, return the equivalent URL path
         in the generated site's file.
@@ -157,6 +157,8 @@ def create_url_lookup(
             if new_file_ext:
                 file_location = replace_ext(file_location, new_file_ext)
 
-        return urljoin(base_url, file_location)
+        if absolute:
+            return urljoin(base_url, file_location)
+        return file_location
 
     return url_lookup
