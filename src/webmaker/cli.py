@@ -1,11 +1,12 @@
 """Command line interface."""
 
-from functools import wraps
 import logging
 import os
+from functools import wraps
+
 import click
 
-from web_maker.project import init_project
+from webmaker.project import init_project
 
 from .build import build_content
 from .config import load_config, setup_logging

@@ -1,6 +1,7 @@
 import pytest
 from click.testing import CliRunner
-from web_maker import cli
+
+from webmaker import cli
 
 
 @pytest.fixture

@@ -8,7 +8,6 @@ from pathlib import Path
 
 import jinja2
 
-
 logger = logging.getLogger(__name__)
 
 PACKAGE_DIR = Path(__file__).parent.expanduser().resolve()
@@ -26,9 +25,7 @@ def init_project(project_name: str):
     """
     logger.debug("Project template directory: %s", PROJECT_TEMPLATE_DIR)
 
-    template_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(PROJECT_TEMPLATE_DIR))
-    )
+    template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(PROJECT_TEMPLATE_DIR)))
     template_model = {"project_name": project_name}
 
     logger.info("Initialising project in: %s", Path.cwd())
@@ -41,10 +38,10 @@ def init_project(project_name: str):
         # Copy top-level files.
         for filename in PROJECT_FILES:
             logger.info("Creating: %s", filename)
-            
+
             if Path(filename).exists():
                 raise FileExistsError(f"File exists: '{filename}'")
-            
+
             srcpath = PROJECT_TEMPLATE_DIR / filename
             shutil.copyfile(srcpath, filename)
 

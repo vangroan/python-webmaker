@@ -2,8 +2,7 @@ import os
 
 import pytest
 
-from web_maker.config import load_config
-
+from webmaker.config import load_config
 
 SAMPLE_YAML = """# Test configuration file
 

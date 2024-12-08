@@ -2,21 +2,20 @@
 
 import contextlib
 import logging
-import shutil
 import os
+import shutil
 from time import monotonic_ns
 
-import rcssmin
+import rcssmin  # type: ignore[import]
 from bs4 import BeautifulSoup
 from jinja2 import Environment, FileSystemLoader
 from markdown import Markdown
 
 from .config import Config
+from .jinja import IgnoreMetaExtension, JinjaMarkdownExtension
 from .loader import PageLoader
 from .template import create_model
-from .jinja import JinjaMarkdownExtension, IgnoreMetaExtension
 from .utils import replace_ext, subtract_prefix
-
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ def build_content(config: Config):
                 metadata = page_loader.get_meta(filepath)
 
                 # Build template scoped model.
-                page_model = {**model, "metadata": {**metadata}, "phase": "content"}
+                page_model = {**model, "metadata": {**metadata.model_dump()}, "phase": "content"}
 
                 file_str = page_loader.load_page(filepath).decode(config.encoding)
 
@@ -72,17 +71,13 @@ def build_content(config: Config):
 
                 # Recreate sub-directory tree by lifting paths out of content folder
                 # and placing them in the root of the distribution folder.
-                target_dir = os.path.join(
-                    config.dist_path, subtract_prefix(config.content_path, root)
-                )
+                target_dir = os.path.join(config.dist_path, subtract_prefix(config.content_path, root))
                 os.makedirs(target_dir, exist_ok=True)
-                target_filepath = os.path.join(
-                    target_dir, replace_ext(filename, "html")
-                )
+                target_filepath = os.path.join(target_dir, replace_ext(filename, "html"))
 
                 # Build page object
                 page = {
-                    "metadata": {**metadata},
+                    "metadata": {**metadata.model_dump()},
                     "content": content_html,
                     "original": file_str,
                     "file_location": filepath,
@@ -90,7 +85,7 @@ def build_content(config: Config):
 
                 with open(target_filepath, "w", encoding="utf-8") as fp:
                     page_model["phase"] = "template"
-                    template_name = metadata["template"] or config.default_template
+                    template_name = metadata.template or config.default_template
                     logger.debug("Load template '%s'", template_name)
                     template = template_env.get_template(template_name)
                     page_html = template.render(page=page, **page_model)

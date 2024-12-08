@@ -1,16 +1,14 @@
 """
 Miscellaneous utilities.
 """
-from io import StringIO
-from functools import reduce
-from itertools import islice
-import typing as T
+
 import pathlib
+import typing as T
+from functools import reduce
+from io import StringIO
+from itertools import islice
 
-
-MarshmallowErrors = T.Union[
-    T.Dict[str, T.List[str]], T.Dict[str, T.Dict[str, T.List[str]]]
-]
+MarshmallowErrors = T.Union[T.Dict[str, T.List[str]], T.Dict[str, T.Dict[str, T.List[str]]]]
 
 
 def format_validation_errors(errors: MarshmallowErrors):
@@ -40,15 +38,11 @@ def format_validation_errors(errors: MarshmallowErrors):
             # extra level deep. The keys are just numbers that can be discarded.
             #
             # Example: {'field_name': {0: ['Not valid.']}}
-            field_errors = reduce(
-                lambda el, agg: agg + el, errors[field_name].values(), []
-            )
+            field_errors = reduce(lambda el, agg: agg + el, errors[field_name].values(), [])
         elif isinstance(errors[field_name], list):
             field_errors = errors[field_name]
         else:
-            raise TypeError(
-                f"Error map should container either dict or list, not {type(errors[field_name])}"
-            )
+            raise TypeError(f"Error map should container either dict or list, not {type(errors[field_name])}")
 
         for i, err in enumerate(field_errors):
             sb.write("  %i. %s\n" % (i + 1, err))

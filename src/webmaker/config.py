@@ -6,8 +6,8 @@ import logging
 import os
 from pathlib import Path
 
-from pydantic import BaseModel, Field, ValidationError
 import yaml
+from pydantic import BaseModel, Field, ValidationError
 
 from . import osutils
 
@@ -45,9 +45,7 @@ def load_config(dir_path: str, filename: str = "config.yaml") -> Config:
         namespace = yaml.safe_load(fp)
 
     if not isinstance(namespace, dict):
-        raise ConfigError(
-            f"Loaded config should be a dictionary, but found '{type(namespace).__qualname__}'"
-        )
+        raise ConfigError(f"Loaded config should be a dictionary, but found '{type(namespace).__qualname__}'")
 
     try:
         config = Config(**namespace)

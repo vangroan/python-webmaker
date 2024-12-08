@@ -5,12 +5,12 @@ Functions for use inside templates.
 import glob
 import os
 import pathlib
-from collections.abc import Generator, Mapping, Sequence
-from urllib.parse import urljoin
+from collections.abc import Mapping, Sequence
 from typing import Any, Callable
+from urllib.parse import urljoin
 
 from .config import Config
-from .loader import PageLoader, PageSchema
+from .loader import Page, PageLoader
 from .utils import extract_ext, replace_ext
 
 
@@ -27,10 +27,8 @@ def create_model(config: Config, page_cache: PageLoader) -> dict[str, Any]:
     model[Concat.name] = Concat()
     model[Join.name] = Join()
     model[InlineFile.name] = InlineFile()
-    model["url"] = create_url_lookup(
-        config.base_url, (config.content_path,), ext_map={"md": "html"}
-    )
-    model["list_pages"] = create_list_pages(config.content_path, page_cache)
+    model["url"] = create_url_lookup(config.base_url, (config.content_path,), ext_map={"md": "html"})
+    model[ListPages.name] = ListPages(config.content_path, page_cache)
 
     return model
 
@@ -80,13 +78,16 @@ class ListPages:
         self.content_dir = pathlib.Path(content_dir)
         self.page_cache = page_cache
 
-    def __call__(self, glob_pattern: str) -> Generator[dict[str, Any]]:
+    def __call__(self, glob_pattern: str = "*") -> list[Page]:
         glob_pathname = os.path.join(self.content_dir, glob_pattern)
+        result = []
 
         for path in glob.glob(glob_pathname, recursive=True):
             metadata = self.page_cache.get_meta(path)
             filepath = os.path.normpath(path)
-            yield PageSchema().load({"meta": metadata, "file_path": filepath})
+            result.append(Page(metadata=metadata, filepath=filepath))
+
+        return result
 
 
 def create_url_lookup(
@@ -159,32 +160,3 @@ def create_url_lookup(
         return urljoin(base_url, file_location)
 
     return url_lookup
-
-
-def create_list_pages(
-    content_dir, page_cache, root_dir=None
-) -> Callable[[str], Generator[dict]]:
-    """
-    Creates a helper function for use in templates for recursively listing pages
-    in the content folder.
-
-    :param content_dir: Directory where page files are kept.
-    :param page_cache: Page loader that can retrieve page metadata.
-    :param root_dir: Optional root directory where the content directory is located.
-        If None, the current working directory is used.
-    :return: Function that takes a file path glob, and returns a generator
-        that yields page objects.
-    """
-    root_dir = root_dir or os.path.curdir
-    target_dir = os.path.join(root_dir, content_dir)
-
-    def list_pages(glob_pathname: str) -> Generator[dict]:
-        glob_pathname = os.path.join(target_dir, glob_pathname)
-
-        for path in glob.glob(glob_pathname, recursive=True):
-            metadata = page_cache.get_meta(path)
-            # FIXME: Do we need the processed markdown content here?
-            file_path = os.path.normpath(path)
-            yield PageSchema().load({"meta": metadata, "file_path": file_path})
-
-    return list_pages

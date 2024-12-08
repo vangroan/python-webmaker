@@ -1,10 +1,11 @@
-from copy import deepcopy
 import logging
 import os
+from copy import deepcopy
+from datetime import datetime
 from typing import Dict, Optional
 
-from marshmallow import fields, EXCLUDE, ValidationError, Schema
 import yaml
+from pydantic import BaseModel, Field, ValidationError
 
 from .utils import format_validation_errors
 
@@ -17,6 +18,46 @@ class PageLoadError(Exception):
     pass
 
 
+class BuiltinMeta(BaseModel):
+    """
+    Schema to validate content metadata that has special purposes within the script.
+    """
+
+    title: str = "page"
+    template: str | None = None
+    draft: bool = False
+
+    created: datetime = Field(default_factory=datetime.now)
+    published: datetime = Field(default_factory=datetime.now)
+
+
+class Page(BaseModel):
+    """
+    Template model for a generated page.
+    """
+
+    filepath: str
+    metadata: BuiltinMeta = Field(default_factory=BuiltinMeta)
+    content: str = ""
+
+    @property
+    def title(self) -> str:
+        return self.metadata.title
+
+    @property
+    def url(self) -> str:
+        """Relative URL to the generated page."""
+        raise NotImplementedError
+
+    @property
+    def absurl(self) -> str:
+        """Absolute URL to the generated page"""
+        raise NotImplementedError
+
+    def __str__(self) -> str:
+        return self.filepath
+
+
 class PageLoader(object):
     """
     Loader for page content files.
@@ -27,12 +68,12 @@ class PageLoader(object):
     Loaded metadata and content are cached, using the given path as a caching key.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: Dict[str, PageLoader.CacheItem] = {}
         self._section_marker = b"---"
         self._logger = logging.getLogger(__name__)
 
-    def get_meta(self, file_path) -> dict:
+    def get_meta(self, file_path) -> BuiltinMeta:
         """
         Load and parse the metadata of the file at the given file path.
 
@@ -67,27 +108,22 @@ class PageLoader(object):
 
                 metadata_str = self._extract_metadata_section(data) or b""
                 metadata = yaml.safe_load(metadata_str) or {}
-                metadata = BuiltinMetaSchema(unknown=EXCLUDE).load(metadata)
+                metadata = BuiltinMeta(**metadata)
                 self._logger.debug("Metadata %s", metadata)
 
-                self._cache[file_path] = PageLoader.CacheItem(
-                    meta=metadata, file_bytes=data
-                )
+                self._cache[file_path] = PageLoader.CacheItem(meta=metadata, file_bytes=data)
         except OSError as err:
             raise PageLoadError("Error opening file %s" % file_path) from err
         except PageLoadError as err:
             raise PageLoadError("Error while loading page %s" % file_path) from err
         except yaml.YAMLError as err:
-            raise PageLoadError(
-                "Error while parsing metadata for %s" % file_path
-            ) from err
+            raise PageLoadError("Error while parsing metadata for %s" % file_path) from err
         except ValidationError as err:
             raise PageLoadError(
-                "Built-in metadata validation errors:\n%s"
-                % format_validation_errors(err.messages)
+                "Built-in metadata validation errors:\n%s" % format_validation_errors(err.messages)
             ) from err
 
-    def _extract_metadata_section(self, data) -> Optional[str]:
+    def _extract_metadata_section(self, data: bytes) -> Optional[bytes]:
         """
         Metadata begins and ends with a marker line, splitting the
         file into three parts. When the parts are not exactly three,
@@ -97,9 +133,8 @@ class PageLoader(object):
         if len(parts) == 3:
             # Section present
             return parts[1]
-        elif len(parts) == 1:
-            # Unbalanced section markers. No section present.
-            return None
+        # Unbalanced section markers. No section present.
+        return None
 
     class CacheItem(object):
         __slots__ = (
@@ -110,22 +145,3 @@ class PageLoader(object):
         def __init__(self, meta=None, file_bytes=None):
             self.meta = meta
             self.file_bytes = file_bytes
-
-
-class BuiltinMetaSchema(Schema):
-    """
-    Schema to validate content metadata that has special purposes within the script.
-    """
-
-    title = fields.String(missing="page")
-    template = fields.String(missing=None)
-    draft = fields.Boolean(missing=False)
-    # FIXME: yaml loader outputs datetime.date, marshmallow expects a string
-    created = fields.Inferred()
-    published = fields.Inferred()
-
-
-class PageSchema(Schema):
-    meta = fields.Nested(BuiltinMetaSchema, required=True)
-    content = fields.String(missing="", required=False)
-    file_path = fields.String(required=True)

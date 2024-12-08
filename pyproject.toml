@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webmaker"
+description = "Static website generator."
+readme = "README.md"
+license = { file = "LICENCE" }
+dynamic = ["version"]
+classifiers = [
+    # As from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+    # 'Development Status :: 1 - Planning',
+    # 'Development Status :: 2 - Pre-Alpha',
+    "Development Status :: 3 - Alpha",
+    # 'Development Status :: 4 - Beta',
+    # 'Development Status :: 5 - Production/Stable',
+    # 'Development Status :: 6 - Mature',
+    # 'Development Status :: 7 - Inactive',
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">= 3.11"
+dependencies = [
+    # Parse Content
+    "markdown==3.1.1",
+    "Jinja2==2.10.3",
+    "markupsafe==2.0.1",  # newer version error: cannot import name 'soft_unicode' from 'markupsafe'
+    "PyYAML==5.3",
+    "Pygments==2.5.2",
+
+    # Minify files
+    "beautifulsoup4~=4.8",
+    "rcssmin~=1.0",
+
+    # CLI
+    "click~=8.0",
+    "colorama",
+    "pydantic~=2.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "black",
+    "isort",
+
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+
+    "types-beautifulsoup4",
+    "types-jinja2",
+    "types-Markdown",
+    "types-PyYaml",
+]
+
+[project.scripts]
+"webmake" = "webmaker.cli:main"
+
+[tool.setuptools.dynamic]
+version = { file = ["version"] }
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "G"]
+ignore = []

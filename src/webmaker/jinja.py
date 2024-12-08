@@ -1,6 +1,7 @@
 """
 Jina2 customisation.
 """
+
 from markdown import Extension
 from markdown.preprocessors import Preprocessor
 

@@ -1,6 +1,6 @@
 import pytest
 
-import web_maker.utils
+import webmaker.utils
 
 
 @pytest.mark.parametrize(
@@ -13,7 +13,7 @@ import web_maker.utils
     ],
 )
 def test_extract_ext(filename, ext):
-    assert web_maker.utils.extract_ext(filename) == ext
+    assert webmaker.utils.extract_ext(filename) == ext
 
 
 @pytest.mark.parametrize(
@@ -27,7 +27,7 @@ def test_extract_ext(filename, ext):
     ],
 )
 def test_replace_ext(filename, ext, new_filename):
-    assert web_maker.utils.replace_ext(filename, ext) == new_filename
+    assert webmaker.utils.replace_ext(filename, ext) == new_filename
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ def test_replace_ext(filename, ext, new_filename):
 )
 def test_subtract_prefix_invalid_input(prefix, path, exception):
     with pytest.raises(exception):
-        web_maker.utils.subtract_prefix(prefix, path)
+        webmaker.utils.subtract_prefix(prefix, path)
 
 
 @pytest.mark.parametrize(
@@ -52,4 +52,4 @@ def test_subtract_prefix_invalid_input(prefix, path, exception):
     ],
 )
 def test_subtract_prefix(prefix, path, result):
-    assert web_maker.utils.subtract_prefix(prefix, path) == result
+    assert webmaker.utils.subtract_prefix(prefix, path) == result

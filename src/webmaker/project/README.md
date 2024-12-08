@@ -6,7 +6,7 @@
 ```sh
 web-maker build
 # or
-python -m web_maker build
+python -m webmaker build
 # or
 make
 ```
